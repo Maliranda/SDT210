@@ -1,5 +1,6 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { getFirestore, type Firestore } from 'firebase/firestore'
+import { getAuth, type Auth } from 'firebase/auth'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string | undefined,
@@ -20,14 +21,43 @@ export function isFirebaseConfigured(): boolean {
 
 let app: FirebaseApp | null = null
 let db: Firestore | null = null
+let auth: Auth | null = null
+
+function getApp(): FirebaseApp | null {
+  if (!isFirebaseConfigured()) return null
+  try {
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig)
+    } else if (!app) {
+      app = getApps()[0] as FirebaseApp
+    }
+    return app
+  } catch (e) {
+    console.warn('Firebase init failed:', e)
+    return null
+  }
+}
 
 export function getFirestoreInstance(): Firestore | null {
-  if (!isFirebaseConfigured()) return null
-  if (getApps().length === 0) {
-    app = initializeApp(firebaseConfig)
-    db = getFirestore(app)
-  } else if (!db) {
-    db = getFirestore(getApps()[0] as FirebaseApp)
+  const firebaseApp = getApp()
+  if (!firebaseApp) return null
+  try {
+    if (!db) db = getFirestore(firebaseApp)
+    return db
+  } catch (e) {
+    console.warn('Firestore init failed:', e)
+    return null
   }
-  return db
+}
+
+export function getAuthInstance(): Auth | null {
+  const firebaseApp = getApp()
+  if (!firebaseApp) return null
+  try {
+    if (!auth) auth = getAuth(firebaseApp)
+    return auth
+  } catch (e) {
+    console.warn('Firebase Auth init failed:', e)
+    return null
+  }
 }

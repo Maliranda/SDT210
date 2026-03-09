@@ -10,11 +10,11 @@ export interface EmptyStateProps {
 
 export function EmptyState({ message, action, className }: EmptyStateProps) {
   return (
-    <Box className={className} sx={{ py: 1, color: 'text.secondary' }}>
+    <Box className={className} sx={{ py: 2, px: 1, color: 'text.secondary', textAlign: 'center' }}>
       <Typography variant="body2" sx={{ m: 0 }}>
         {message}
       </Typography>
-      {action != null && <Box sx={{ mt: 0.5 }}>{action}</Box>}
+      {action != null && <Box sx={{ mt: 1 }}>{action}</Box>}
     </Box>
   )
 }

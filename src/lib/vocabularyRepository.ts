@@ -41,8 +41,17 @@ function stripUndefined<T>(obj: T): T {
   return out as T
 }
 
-export function createFirebaseVocabularyRepository(db: Firestore, collectionName = 'vocabulary'): IVocabularyRepository {
-  const ref = doc(db, collectionName, APP_STATE_DOC_ID)
+/**
+ * @param userId - If set, data is stored per user (users/{userId}/vocabulary/appState). Otherwise one global doc.
+ */
+export function createFirebaseVocabularyRepository(
+  db: Firestore,
+  collectionName = 'vocabulary',
+  userId?: string | null
+): IVocabularyRepository {
+  const ref = userId
+    ? doc(db, 'users', userId, 'vocabulary', APP_STATE_DOC_ID)
+    : doc(db, collectionName, APP_STATE_DOC_ID)
   return {
     async load() {
       const snap = await getDoc(ref)

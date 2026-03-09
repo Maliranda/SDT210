@@ -16,9 +16,9 @@ export function ListItem({ children, className }: ListItemProps) {
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 1,
-        py: 0.5,
+        py: 1.25,
         borderBottom: '1px solid',
-        borderColor: 'divider',
+        borderColor: 'rgba(107, 70, 193, 0.1)',
         '&:last-of-type': { borderBottom: 'none' },
       }}
     >

@@ -1,27 +1,89 @@
-import { Routes, Route, Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Routes, Route, NavLink } from 'react-router-dom'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { VocabularyBuilderProvider } from './context/VocabularyBuilderContext'
+import { isFirebaseConfigured } from './lib/firebase'
 import HomePage from './pages/HomePage'
 import VocabularyPage from './pages/VocabularyPage'
 import PracticePage from './pages/PracticePage'
+import LoginPage from './pages/LoginPage'
+
+function AppContent() {
+  const auth = useAuth()
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  const requireLogin = isFirebaseConfigured()
+  const showLogin = requireLogin && auth && !auth.loading && !auth.user
+
+  const handleSignOut = async () => {
+    if (!auth?.signOut) return
+    setLoggingOut(true)
+    try {
+      await auth.signOut()
+    } finally {
+      setLoggingOut(false)
+    }
+  }
+
+  if (auth?.loading) {
+    return (
+      <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <p>Loading…</p>
+      </div>
+    )
+  }
+
+  if (showLogin) {
+    return <LoginPage />
+  }
+
+  return (
+    <VocabularyBuilderProvider>
+      <div className="app">
+        <nav className="nav">
+          <NavLink to="/" className="nav-brand" end>
+            <span className="nav-brand-icon" aria-hidden>📚</span>
+            Vocabulary Builder
+          </NavLink>
+          <div className="nav-links">
+            <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
+              Home
+            </NavLink>
+            <NavLink to="/vocabulary" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Vocabulary
+            </NavLink>
+            <NavLink to="/practice" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Practice
+            </NavLink>
+            {requireLogin && auth?.user && (
+              <button
+                type="button"
+                className="nav-sign-out"
+                onClick={handleSignOut}
+                disabled={loggingOut}
+              >
+                {loggingOut ? '…' : 'Sign out'}
+              </button>
+            )}
+          </div>
+        </nav>
+        <main className="main">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/vocabulary" element={<VocabularyPage />} />
+            <Route path="/practice" element={<PracticePage />} />
+          </Routes>
+        </main>
+      </div>
+    </VocabularyBuilderProvider>
+  )
+}
 
 function App() {
   return (
-    <VocabularyBuilderProvider>
-    <div className="app">
-      <nav className="nav">
-        <Link to="/">Home</Link>
-        <Link to="/vocabulary">Vocabulary</Link>
-        <Link to="/practice">Practice</Link>
-      </nav>
-      <main className="main">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/vocabulary" element={<VocabularyPage />} />
-          <Route path="/practice" element={<PracticePage />} />
-        </Routes>
-      </main>
-    </div>
-    </VocabularyBuilderProvider>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
