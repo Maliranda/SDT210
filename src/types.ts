@@ -1,6 +1,6 @@
-export type MasteryLevel = 1 | 2 | 3 | 4 | 5;
+export type MasteryLevel = 1 | 2; // 1 = new, 2 = learned
 
-export type MasteryCategory = 'new' | 'learning' | 'familiar' | 'mastered';
+export type MasteryCategory = 'new' | 'learned';
 
 export type PracticeMode = 'multiple-choice' | 'fill-in-the-blank' | 'matching';
 

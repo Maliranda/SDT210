@@ -12,11 +12,7 @@ const firebaseConfig = {
 }
 
 export function isFirebaseConfigured(): boolean {
-  return Boolean(
-    firebaseConfig.apiKey &&
-      firebaseConfig.projectId &&
-      firebaseConfig.appId
-  )
+  return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId)
 }
 
 let app: FirebaseApp | null = null
@@ -26,11 +22,8 @@ let auth: Auth | null = null
 function getApp(): FirebaseApp | null {
   if (!isFirebaseConfigured()) return null
   try {
-    if (getApps().length === 0) {
-      app = initializeApp(firebaseConfig)
-    } else if (!app) {
-      app = getApps()[0] as FirebaseApp
-    }
+    if (getApps().length === 0) app = initializeApp(firebaseConfig)
+    else if (!app) app = getApps()[0] as FirebaseApp
     return app
   } catch (e) {
     console.warn('Firebase init failed:', e)

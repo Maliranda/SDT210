@@ -94,10 +94,10 @@ describe('useVocabularyBuilder', () => {
     const wordId = result.current.state.words[0].id;
 
     act(() => {
-      result.current.updateWordMastery(wordId, 4);
+      result.current.updateWordMastery(wordId, 2);
     });
 
-    expect(result.current.state.words[0].masteryLevel).toBe(4);
+    expect(result.current.state.words[0].masteryLevel).toBe(2);
   });
 
   it('should record a practice session', () => {

@@ -2,17 +2,19 @@ import { useState } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { VocabularyBuilderProvider } from './context/VocabularyBuilderContext'
-import { isFirebaseConfigured } from './lib/firebase'
+import { authService } from './services/auth'
 import HomePage from './pages/HomePage'
 import VocabularyPage from './pages/VocabularyPage'
 import PracticePage from './pages/PracticePage'
+import SettingsPage from './pages/SettingsPage'
+import AboutPage from './pages/AboutPage'
 import LoginPage from './pages/LoginPage'
 
 function AppContent() {
   const auth = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
 
-  const requireLogin = isFirebaseConfigured()
+  const requireLogin = authService.isConfigured()
   const showLogin = requireLogin && auth && !auth.loading && !auth.user
 
   const handleSignOut = async () => {
@@ -55,6 +57,9 @@ function AppContent() {
             <NavLink to="/practice" className={({ isActive }) => (isActive ? 'active' : '')}>
               Practice
             </NavLink>
+            <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Settings
+            </NavLink>
             {requireLogin && auth?.user && (
               <button
                 type="button"
@@ -72,6 +77,8 @@ function AppContent() {
             <Route path="/" element={<HomePage />} />
             <Route path="/vocabulary" element={<VocabularyPage />} />
             <Route path="/practice" element={<PracticePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/about" element={<AboutPage />} />
           </Routes>
         </main>
       </div>

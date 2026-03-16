@@ -9,6 +9,10 @@ export interface IVocabularyRepository {
   save(state: AppState): Promise<void>
 }
 
+function normalizeMastery(level: number): 1 | 2 {
+  return level >= 2 ? 2 : 1
+}
+
 function parseState(data: unknown): AppState {
   if (data == null || typeof data !== 'object') {
     return {
@@ -20,14 +24,21 @@ function parseState(data: unknown): AppState {
     }
   }
   const o = data as Record<string, unknown>
+  const rawWords = Array.isArray(o.words) ? (o.words as Array<{ masteryLevel?: number }>) : []
+  const words = rawWords.map((w) => ({ ...w, masteryLevel: normalizeMastery(w.masteryLevel ?? 1) })) as AppState['words']
+  const rawFilter = o.masteryFilter
+  const masteryFilter =
+    typeof rawFilter === 'string' && (rawFilter === 'new' || rawFilter === 'learned')
+      ? (rawFilter as AppState['masteryFilter'])
+      : typeof rawFilter === 'string' && ['learning', 'familiar', 'mastered'].includes(rawFilter)
+        ? ('learned' as AppState['masteryFilter'])
+        : null
   return {
-    words: Array.isArray(o.words) ? o.words as AppState['words'] : [],
+    words,
     lists: Array.isArray(o.lists) ? o.lists as AppState['lists'] : [],
     sessions: Array.isArray(o.sessions) ? o.sessions as AppState['sessions'] : [],
     currentListFilter: typeof o.currentListFilter === 'string' ? o.currentListFilter : null,
-    masteryFilter: typeof o.masteryFilter === 'string' && ['new', 'learning', 'familiar', 'mastered'].includes(o.masteryFilter)
-      ? o.masteryFilter as AppState['masteryFilter']
-      : null,
+    masteryFilter,
   }
 }
 

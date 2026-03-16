@@ -9,6 +9,7 @@ import {
   ListItem,
   Strong,
   Section,
+  StatusBanner,
 } from '../components/ui'
 
 function HomePage() {
@@ -74,6 +75,8 @@ function HomePage() {
           </Box>
         </Box>
       </div>
+
+      <StatusBanner loading={state.loading} error={state.error} />
 
       <Box sx={{ mt: 3 }}>
         <Section title="Quick links">

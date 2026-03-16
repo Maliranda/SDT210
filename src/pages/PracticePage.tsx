@@ -31,6 +31,13 @@ const MODE_OPTIONS: { value: PracticeMode; label: string }[] = [
   { value: 'matching', label: 'Matching' },
 ]
 
+type MasteryFilter = 'all' | 'new' | 'learned'
+const MASTERY_FILTER_OPTIONS: { value: MasteryFilter; label: string }[] = [
+  { value: 'all', label: 'All words' },
+  { value: 'new', label: 'New words only' },
+  { value: 'learned', label: 'Learned words only' },
+]
+
 function Feedback({ correct, term }: { correct: boolean; term?: string }) {
   return (
     <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: correct ? 'success.light' : 'error.light', color: correct ? 'success.dark' : 'error.dark' }}>
@@ -45,12 +52,15 @@ export default function PracticePage() {
   const { state, updateWordMastery, recordPracticeSession } = useVocabularyBuilderContext()
   const [practiceListId, setPracticeListId] = useState('')
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('multiple-choice')
+  const [practiceMasteryFilter, setPracticeMasteryFilter] = useState<MasteryFilter>('all')
   const [currentMode, setCurrentMode] = useState<PracticeMode | null>(null)
 
-  const words = useMemo(
-    () => practiceListId ? state.words.filter((w) => w.listId === practiceListId) : state.words,
-    [state.words, practiceListId],
-  )
+  const words = useMemo(() => {
+    let list = practiceListId ? state.words.filter((w) => w.listId === practiceListId) : state.words
+    if (practiceMasteryFilter === 'new') list = list.filter((w) => w.masteryLevel === 1)
+    else if (practiceMasteryFilter === 'learned') list = list.filter((w) => w.masteryLevel === 2)
+    return list
+  }, [state.words, practiceListId, practiceMasteryFilter])
 
   const listOptions = useMemo(
     () => [{ value: '', label: 'All words' }, ...state.lists.map((l) => ({ value: l.id, label: l.name }))],
@@ -129,8 +139,8 @@ export default function PracticePage() {
 
   const handleNext = useCallback(() => {
     if (!cur) return
-    if (wasCorrect && cur.masteryLevel < 5)
-      updateWordMastery(cur.id, (cur.masteryLevel + 1) as 1 | 2 | 3 | 4 | 5)
+    if (wasCorrect && cur.masteryLevel === 1)
+      updateWordMastery(cur.id, 2)
     if (qi + 1 >= total) { finishRound(roundCorrect, currentMode ?? 'multiple-choice'); return }
     const next = roundWords[qi + 1]
     setQi(qi + 1); setAnswered(false); setFillIn('')
@@ -163,7 +173,18 @@ export default function PracticePage() {
           <FormField label="Practice from:">
             <Select options={listOptions} value={practiceListId} onChange={(e) => setPracticeListId(e.target.value)} />
           </FormField>
-          {practiceListId && words.length === 0 && <Text>This list has no words. Add words or choose another list.</Text>}
+          <FormField label="Words to practice:">
+            <Select options={MASTERY_FILTER_OPTIONS} value={practiceMasteryFilter} onChange={(e) => setPracticeMasteryFilter(e.target.value as MasteryFilter)} />
+          </FormField>
+          {words.length === 0 && (
+            <Text>
+              {practiceMasteryFilter !== 'all'
+                ? `No ${practiceMasteryFilter === 'new' ? 'new' : 'learned'} words${practiceListId ? ' in this list' : ''}. Change filter or add words.`
+                : practiceListId
+                  ? 'This list has no words. Add words to the list or choose another list.'
+                  : 'Add some words first.'}
+            </Text>
+          )}
           {practiceMode === 'matching' && words.length >= 1 && words.length < MATCHING_MIN && (
             <Text>Matching needs at least {MATCHING_MIN} words.</Text>
           )}

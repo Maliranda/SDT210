@@ -3,27 +3,20 @@ import Box from '@mui/material/Box'
 import { useVocabularyBuilderContext } from '../context/VocabularyBuilderContext'
 import {
   PageLayout, Heading, Text, AppLink, Section, Form, Input, Button,
-  FormField, Select, type SelectOption, List, ListItem, EmptyState, Strong, Card,
+  FormField, Select, type SelectOption, List, ListItem, EmptyState, Strong, Card, StatusBanner, ConfirmDialog,
 } from '../components/ui'
 import type { MasteryCategory, MasteryLevel, VocabularyWord } from '../types'
 
 function matchesMastery(word: VocabularyWord, filter: MasteryCategory | null): boolean {
   if (!filter) return true
-  const m: Record<MasteryCategory, (l: number) => boolean> = {
-    new: (l) => l === 1, learning: (l) => l === 2,
-    familiar: (l) => l === 3, mastered: (l) => l >= 4,
-  }
-  return m[filter](word.masteryLevel)
+  return filter === 'new' ? word.masteryLevel === 1 : word.masteryLevel === 2
 }
 
 const MASTERY_FILTER: SelectOption[] = [
-  { value: '', label: 'All' }, { value: 'new', label: 'New' },
-  { value: 'learning', label: 'Learning' }, { value: 'familiar', label: 'Familiar' },
-  { value: 'mastered', label: 'Mastered' },
+  { value: '', label: 'All' }, { value: 'new', label: 'New' }, { value: 'learned', label: 'Learned' },
 ]
 const MASTERY_LEVELS: SelectOption[] = [
-  { value: '1', label: '1 (new)' }, { value: '2', label: '2' },
-  { value: '3', label: '3' }, { value: '4', label: '4' }, { value: '5', label: '5 (mastered)' },
+  { value: '1', label: 'New' }, { value: '2', label: 'Learned' },
 ]
 
 function VocabularyPage() {
@@ -41,11 +34,13 @@ function VocabularyPage() {
 
   const [editingWord, setEditingWord] = useState<{ id: string; term: string; definition: string; mastery: string } | null>(null)
   const [editingList, setEditingList] = useState<{ id: string; name: string; addWordId: string } | null>(null)
+  const [wordToDelete, setWordToDelete] = useState<VocabularyWord | null>(null)
+  const [listToDelete, setListToDelete] = useState<{ id: string; name: string } | null>(null)
 
   const handleAddWord = (e: React.FormEvent) => {
     e.preventDefault()
     if (!term.trim() || !definition.trim()) return
-    const level = Math.max(1, Math.min(5, Number(addWordMastery))) as MasteryLevel
+    const level = (Number(addWordMastery) === 2 ? 2 : 1) as MasteryLevel
     let listId: string | null = null
     if (addWordListId === '__new__' && newListNameForWord.trim()) {
       listId = addList(newListNameForWord.trim()).id
@@ -65,7 +60,7 @@ function VocabularyPage() {
 
   const saveWord = () => {
     if (!editingWord) return
-    const level = Math.max(1, Math.min(5, Number(editingWord.mastery))) as MasteryLevel
+    const level = (Number(editingWord.mastery) === 2 ? 2 : 1) as MasteryLevel
     updateWord(editingWord.id, { term: editingWord.term.trim(), definition: editingWord.definition.trim() })
     updateWordMastery(editingWord.id, level)
     setEditingWord(null)
@@ -77,10 +72,27 @@ function VocabularyPage() {
     setEditingList(null)
   }
 
-  const handleDeleteList = (listId: string) => {
-    if (!window.confirm('Delete this list? Words in it will stay but will have no list.')) return
-    deleteList(listId)
-    if (editingList?.id === listId) setEditingList(null)
+  const handleDeleteWordClick = (word: VocabularyWord) => {
+    setWordToDelete(word)
+  }
+
+  const handleConfirmDeleteWord = () => {
+    if (wordToDelete) {
+      deleteWord(wordToDelete.id)
+      setWordToDelete(null)
+    }
+  }
+
+  const handleDeleteListClick = (listId: string, listName: string) => {
+    setListToDelete({ id: listId, name: listName })
+  }
+
+  const handleConfirmDeleteList = () => {
+    if (listToDelete) {
+      deleteList(listToDelete.id)
+      if (editingList?.id === listToDelete.id) setEditingList(null)
+      setListToDelete(null)
+    }
   }
 
   const filteredWords = state.words.filter((w) => matchesMastery(w, state.masteryFilter))
@@ -105,6 +117,8 @@ function VocabularyPage() {
         existing ones, and organize words into themed lists.
       </Text>
       <Text as="span"><AppLink to="/">← Back to Home</AppLink></Text>
+
+      <StatusBanner loading={state.loading} error={state.error} />
 
       <Section title={wordCountTitle}>
         <Form onSubmit={handleAddWord}>
@@ -149,11 +163,11 @@ function VocabularyPage() {
                 ) : (
                   <>
                     <Box component="span">
-                      <Strong>{word.term}</Strong> – {word.definition} (mastery: {word.masteryLevel})
+                      <Strong>{word.term}</Strong> – {word.definition} ({ word.masteryLevel === 1 ? 'New' : 'Learned' })
                     </Box>
                     <Box component="span" sx={{ display: 'inline-flex', gap: 0.5 }}>
                       <Button variant="secondary" onClick={() => setEditingWord({ id: word.id, term: word.term, definition: word.definition, mastery: String(word.masteryLevel) })} aria-label={`Edit ${word.term}`}>Edit</Button>
-                      <Button variant="danger" onClick={() => deleteWord(word.id)} aria-label={`Delete ${word.term}`}>Delete</Button>
+                      <Button variant="danger" onClick={() => handleDeleteWordClick(word)} aria-label={`Delete ${word.term}`}>Delete</Button>
                     </Box>
                   </>
                 )}
@@ -229,7 +243,7 @@ function VocabularyPage() {
                     <Box component="span">{list.name}</Box>
                     <Box component="span" sx={{ display: 'inline-flex', gap: 0.5 }}>
                       <Button variant="secondary" onClick={() => setEditingList({ id: list.id, name: list.name, addWordId: '' })} aria-label={`Edit list ${list.name}`}>Edit</Button>
-                      <Button variant="danger" onClick={() => handleDeleteList(list.id)} aria-label={`Delete list ${list.name}`}>Delete</Button>
+                      <Button variant="danger" onClick={() => handleDeleteListClick(list.id, list.name)} aria-label={`Delete list ${list.name}`}>Delete</Button>
                     </Box>
                   </>
                 )}
@@ -238,6 +252,26 @@ function VocabularyPage() {
           </List>
         )}
       </Section>
+
+      <ConfirmDialog
+        open={wordToDelete !== null}
+        title="Delete word?"
+        message={wordToDelete ? `Are you sure you want to delete "${wordToDelete.term}"? This cannot be undone.` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmDeleteWord}
+        onCancel={() => setWordToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={listToDelete !== null}
+        title="Delete list?"
+        message={listToDelete ? `Are you sure you want to delete the list "${listToDelete.name}"? Words in it will stay but will have no list. This cannot be undone.` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmDeleteList}
+        onCancel={() => setListToDelete(null)}
+      />
     </PageLayout>
   )
 }

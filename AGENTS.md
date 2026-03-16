@@ -53,12 +53,16 @@ export interface VocabularyStoreState extends AppState {
 
 ---
 
-## 4. API Conventions
+## 4. API & Service Conventions
 
-- **Where:** `src/services/api.ts`.
-- **Approach:** Plain `fetch` (no axios; TanStack Query can be added later).
-- **Interface:** `IVocabularyApi` — `loadState`, `saveState`, `getWords`, `addWord`, `updateWord`, `deleteWord`, `getLists`, `addList`, `getSessions`, `recordSession`.
-- **Status:** Placeholder implementations (empty/mock data) so the app compiles. Project 5 will wire real persistence and use `loading`/`error` from the store.
+- **Service layer:** `src/services/` — all Firebase/backend operations go through this folder.
+- **Files:**
+  - `firebase-config.ts` — Firebase initialization and instance getters
+  - `auth.ts` — `authService` with `signIn`, `signUp`, `signOut`, `onAuthStateChanged`
+  - `api.ts` — `vocabularyApi` with `loadState`, `saveState` (real Firestore persistence)
+- **Rule:** Components and contexts import **only from `src/services/`**, never from Firebase SDK directly.
+- **Interface:** `IVocabularyApi` — `loadState`, `saveState`, `getWords`, `addWord`, etc.
+- **Persistence:** `loadState(userId)` and `saveState(state, userId)` use Firestore document at `users/{uid}/vocabulary/appState`.
 
 ---
 
@@ -70,9 +74,9 @@ src/
 │   └── ui/              # Reusable UI abstractions (MUI wrappers)
 ├── context/             # React contexts (VocabularyBuilderContext, AuthContext)
 ├── hooks/               # Custom hooks (useVocabularyBuilder) + tests
-├── lib/                 # Firebase, persistence repository
+├── lib/                 # Legacy: IVocabularyRepository interface (used by Project 3 hook)
 ├── pages/               # Pages — composition of UI components and hooks
-├── services/            # API service layer (api.ts)
+├── services/            # ALL backend operations: firebase-config.ts, auth.ts, api.ts
 ├── store/               # Zustand store (vocabularyStore.ts)
 ├── test/                # Test setup (Vitest)
 ├── types.ts
@@ -88,16 +92,19 @@ src/
 | `src/store/vocabularyStore.ts`              | Zustand store: state + actions |
 | `src/context/VocabularyBuilderContext.tsx`   | Provider that bridges store ↔ pages, wires persistence |
 | `src/context/AuthContext.tsx`               | Firebase Auth provider (user, loading, signOut) |
-| `src/services/api.ts`                       | `IVocabularyApi` + placeholder implementations |
+| `src/services/firebase-config.ts`           | Firebase initialization and instance getters |
+| `src/services/auth.ts`                      | Auth service: signIn, signUp, signOut |
+| `src/services/api.ts`                       | `IVocabularyApi` with real Firestore persistence |
 | `src/hooks/useVocabularyBuilder.ts`         | Project 3 custom hook (kept for grading) |
 | `src/hooks/useVocabularyBuilder.test.ts`    | Tests for the hook |
 | `src/pages/HomePage.tsx`                    | Landing page with stats and links |
 | `src/pages/VocabularyPage.tsx`              | Add/edit/delete words and lists |
 | `src/pages/PracticePage.tsx`                | Multiple choice, fill-in-the-blank, matching |
+| `src/pages/SettingsPage.tsx`                | User settings and account info |
+| `src/pages/AboutPage.tsx`                   | App information and tech stack |
 | `src/pages/LoginPage.tsx`                   | Sign in / sign up (Firebase Auth) |
 | `src/components/ui/*`                       | Reusable UI components (MUI wrappers) |
-| `src/lib/firebase.ts`                       | Firebase app, Firestore, Auth init |
-| `src/lib/vocabularyRepository.ts`           | Firestore persistence adapter (per-user) |
+| `src/lib/vocabularyRepository.ts`           | Legacy: IVocabularyRepository interface (Project 3 hook) |
 | `src/ErrorBoundary.tsx`                     | Catches render errors |
 
 Naming: Components PascalCase; hooks `use*`; store `*Store.ts`; services `api.ts`.
@@ -139,3 +146,38 @@ Example (add "archive word"): add `archived: boolean` to `VocabularyWord`; add `
 - `npm run test` — All tests pass.
 - `npx tsc --noEmit` — No TypeScript errors.
 - Pages must not contain raw HTML tags — only components from `src/components/ui/`.
+
+---
+
+## 9. Backend (Project 5)
+
+- **Choice:** Firebase (Firestore + Auth).
+- **Why:** Zero-config BaaS, free tier sufficient, real-time sync built-in, integrates auth and database in one SDK.
+- **Configuration:** Environment variables in `.env` (not committed):
+  - `VITE_FIREBASE_API_KEY`
+  - `VITE_FIREBASE_AUTH_DOMAIN`
+  - `VITE_FIREBASE_PROJECT_ID`
+  - `VITE_FIREBASE_STORAGE_BUCKET`
+  - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+  - `VITE_FIREBASE_APP_ID`
+- **Persistence layer:** `src/services/api.ts` — `vocabularyApi.loadState(userId)` and `vocabularyApi.saveState(state, userId)`. Creates per-user document at `users/{uid}/vocabulary/appState`.
+- **Async states:** Context sets `loading: true` before load, `loading: false` after. On error, sets `error` message. Pages can read `state.loading` and `state.error` from context.
+
+---
+
+## 10. Authentication (Project 5)
+
+- **Choice:** Firebase Auth (email/password).
+- **Why:** Integrated with Firestore, handles sessions automatically, secure by default.
+- **Flow:**
+  1. App checks `isFirebaseConfigured()` — if false, runs without auth (local-only mode).
+  2. If configured, `AuthProvider` listens to `onAuthStateChanged`.
+  3. If no user, shows `LoginPage` (sign in / sign up forms).
+  4. After auth, `VocabularyBuilderProvider` uses `userId` to scope Firestore document.
+  5. Sign out button in nav calls `auth.signOut()`.
+- **Protected routes:** All routes except `/login` require authentication when Firebase is configured.
+- **Files:**
+  - `src/services/firebase-config.ts` — Firebase initialization
+  - `src/services/auth.ts` — `authService` with signIn, signUp, signOut
+  - `src/context/AuthContext.tsx` — `AuthProvider`, `useAuth()` (uses authService)
+  - `src/pages/LoginPage.tsx` — sign in / sign up UI (uses authService)

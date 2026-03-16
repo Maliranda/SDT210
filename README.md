@@ -1,7 +1,5 @@
 # Vocabulary Builder
 
-Learn vocabulary with definitions, practice modes, and mastery levels.
-
 ## Theme
 
 A vocabulary-learning app where you can add words with definitions and example sentences, organize them into themed lists, practice with multiple modes (multiple choice, fill-in-the-blank, matching), and track mastery (1–5 scale) with filters like new, learning, familiar, and mastered. Includes quiz mode, session statistics, search, review mode, and spaced practice.
@@ -22,27 +20,37 @@ The UI is built with **Material UI (MUI)**. Components in `src/components/ui/` w
 
 ```
 vocabulary-builder/
-├── CURSOR.md                 # AI agent instructions (rules, structure, step-down rule)
+├── AGENTS.md                 # AI agent instructions
 ├── src/
-│   ├── theme.ts              # MUI theme
+│   ├── theme.ts             
 │   ├── types.ts
 │   ├── main.tsx
 │   ├── App.tsx
+│   ├── ErrorBoundary.tsx
 │   ├── index.css
 │   ├── components/
-│   │   └── ui/               # Reusable UI (MUI-based: Button, Input, PageLayout, etc.)
+│   │   └── ui/              
 │   ├── context/
-│   │   └── VocabularyBuilderContext.tsx
+│   │   ├── VocabularyBuilderContext.tsx
+│   │   └── AuthContext.tsx
 │   ├── hooks/
 │   │   ├── useVocabularyBuilder.ts
 │   │   └── useVocabularyBuilder.test.ts
 │   ├── lib/
-│   │   ├── firebase.ts
-│   │   └── vocabularyRepository.ts  
+│   │   └── vocabularyRepository.ts  # Legacy interface (Project 3)
 │   ├── pages/
 │   │   ├── HomePage.tsx
 │   │   ├── VocabularyPage.tsx
-│   │   └── PracticePage.tsx
+│   │   ├── PracticePage.tsx
+│   │   ├── SettingsPage.tsx
+│   │   ├── AboutPage.tsx
+│   │   └── LoginPage.tsx
+│   ├── services/
+│   │   ├── firebase-config.ts # Firebase initialization
+│   │   ├── auth.ts           # Auth service
+│   │   └── api.ts            # Persistence service (Firestore)
+│   ├── store/
+│   │   └── vocabularyStore.ts
 │   └── test/
 │       └── setup.ts
 ├── index.html
@@ -105,4 +113,87 @@ npm run test
 ### AI Usage Statement
 
 AI was used to generate the custom hook scaffolding from the existing type definitions, test boilerplate and edge-case suggestions, and to wire the hook into pages via a context provider. All code was reviewed, type-checked with `tsc --noEmit`, and verified with `npm run test`.
+
+---
+
+## Project 4: State Management
+
+- **Library:** Zustand (v5)
+- **Store:** `src/store/vocabularyStore.ts` — single source of truth with `loading` and `error` for async operations
+- **Context bridge:** `VocabularyBuilderContext` reads from store via `useShallow`, exposes same API to pages
+- **API service:** `src/services/api.ts` — TypeScript interface `IVocabularyApi` with placeholder implementations
+
+---
+
+## Project 5: End-to-End Assembly with Persistence
+
+### Backend Choice
+
+**Firebase (Firestore + Auth)** — chosen because it's a zero-config BaaS with a generous free tier, real-time sync, and integrated authentication. No server to deploy or maintain.
+
+### Authentication Approach
+
+**Firebase Auth (email/password)**. If Firebase env vars are not set, the app runs in local-only mode without login. When configured:
+1. `AuthProvider` listens to auth state
+2. Unauthenticated users see `LoginPage`
+3. After login, data is scoped to `users/{uid}/vocabulary/appState`
+4. Sign out button in nav
+
+### Feature Verification Table
+
+| Feature | Page | Works | Persists |
+|---------|------|-------|----------|
+| Add word | /vocabulary | ✅ | ✅ |
+| Edit word | /vocabulary | ✅ | ✅ |
+| Delete word | /vocabulary | ✅ | ✅ |
+| Add list | /vocabulary | ✅ | ✅ |
+| Edit list (rename, add/remove words) | /vocabulary | ✅ | ✅ |
+| Delete list | /vocabulary | ✅ | ✅ |
+| Filter by mastery | /vocabulary | ✅ | ✅ |
+| Multiple choice practice | /practice | ✅ | ✅ |
+| Fill-in-the-blank practice | /practice | ✅ | ✅ |
+| Matching practice | /practice | ✅ | ✅ |
+| Practice by list | /practice | ✅ | ✅ |
+| Record practice session | /practice | ✅ | ✅ |
+| Sign in | /login | ✅ | — |
+| Sign up | /login | ✅ | — |
+| Sign out | nav | ✅ | — |
+| View account info | /settings | ✅ | — |
+| View app info | /about | ✅ | — |
+
+### How to Run
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **(Optional) Configure Firebase:**
+   Create a `.env` file in the project root with your Firebase config:
+   ```
+   VITE_FIREBASE_API_KEY=your-api-key
+   VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+   VITE_FIREBASE_APP_ID=1:123456789:web:abc123
+   ```
+   Without this, the app runs in local-only mode (no auth, no persistence).
+
+3. **Start the dev server:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open** `http://localhost:5173` in your browser.
+
+5. **Type-check:**
+   ```bash
+   npx tsc --noEmit
+   ```
+
+6. **Run tests:**
+   ```bash
+   npm run test
+   ```
 
